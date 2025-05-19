@@ -1,5 +1,9 @@
 version: "3.7"
 services:
+  redis:
+    image: redis:7.4
+    ports:
+      - "6379:6379"
   postgres:
     image: postgres:14
     ports:
@@ -7,6 +11,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=transactions
   zookeeper:
     image: confluentinc/cp-zookeeper:5.5.3
     environment:
