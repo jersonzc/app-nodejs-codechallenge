@@ -15,3 +15,8 @@ export interface CreateTransactionDto {
   transferTypeId: number;
   value: number;
 }
+
+export interface TransactionStatusDto {
+  id: string;
+  status: TransactionStatus;
+}

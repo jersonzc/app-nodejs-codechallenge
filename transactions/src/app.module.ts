@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { PostgresModule } from './database/postgres.module';
 import { RedisModule } from './database/redis.module';
+import { KafkaModule } from './kafka/kafka.module';
 import { TransactionsModule } from './transactions/transactions.module';
 
 @Module({
@@ -11,6 +12,7 @@ import { TransactionsModule } from './transactions/transactions.module';
     ConfigModule.forRoot(),
     PostgresModule,
     RedisModule,
+    KafkaModule,
     TransactionsModule,
   ],
   controllers: [AppController],

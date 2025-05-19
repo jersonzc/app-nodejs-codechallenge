@@ -2,7 +2,12 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Pool } from 'pg';
 import { RedisClientType } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import { CreateTransactionDto, Transaction } from './transaction.model';
+import { KafkaService } from '../kafka/kafka.service';
+import {
+  CreateTransactionDto,
+  Transaction,
+  TransactionStatusDto,
+} from './transaction.model';
 
 @Injectable()
 export class TransactionsService implements OnModuleInit {
@@ -11,11 +16,17 @@ export class TransactionsService implements OnModuleInit {
   constructor(
     @Inject('POSTGRES_CONNECTION') private readonly pgPool: Pool,
     @Inject('REDIS_CONNECTION') private readonly redisClient: RedisClientType,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   async onModuleInit() {
     // Initialize Postgres table if it doesn't exist
     await this.initializePostgresTable();
+
+    // Subscribe to Kafka transactions-status topic
+    this.kafkaService.consumeTransactionsStatus(
+      this.updateTransactionStatus.bind(this),
+    );
   }
 
   private async initializePostgresTable(): Promise<void> {
@@ -79,6 +90,9 @@ export class TransactionsService implements OnModuleInit {
         JSON.stringify(transaction),
       );
 
+      // Publish to Kafka
+      await this.kafkaService.publish('transactions', transaction);
+
       this.logger.log(`Transaction created with ID: ${transaction.id}`);
       return transaction;
     } catch (error) {
@@ -129,6 +143,51 @@ export class TransactionsService implements OnModuleInit {
       return transaction;
     } catch (error) {
       this.logger.error(`Failed to get transaction ${id}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async updateTransactionStatus(
+    statusUpdate: TransactionStatusDto,
+  ): Promise<void> {
+    try {
+      const { id, status } = statusUpdate;
+
+      // Update in PostgreSQL
+      const pgResult = await this.pgPool.query(
+        `
+        UPDATE transactions 
+        SET status = $1 
+        WHERE id = $2
+        RETURNING *
+        `,
+        [status, id],
+      );
+
+      if (pgResult.rows.length === 0) {
+        this.logger.warn(`Transaction ${id} not found for status update`);
+        return;
+      }
+
+      // Update in Redis
+      const exists = await this.redisClient.exists(`transaction:${id}`);
+      if (exists) {
+        const transactionStr = await this.redisClient.get(`transaction:${id}`);
+        if (transactionStr) {
+          const transaction = JSON.parse(transactionStr);
+          transaction.status = status;
+          await this.redisClient.set(
+            `transaction:${id}`,
+            JSON.stringify(transaction),
+          );
+        }
+      }
+
+      this.logger.log(`Transaction ${id} status updated to ${status}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to update transaction status: ${error.message}`,
+      );
       throw error;
     }
   }
