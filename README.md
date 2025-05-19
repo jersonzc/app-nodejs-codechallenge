@@ -8,7 +8,9 @@ docker-compose up --build
 
 ### Init services
 - Go to [transactions](./transactions) and [anti-fraud](./anti-fraud).
-- `pnpm install` and `pnpm start` 🐕
+- `pnpm install`
+- `.env.example .env`
+- and `pnpm start` 🐕
 
 # Yape Code Challenge :rocket:
 
