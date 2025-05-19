@@ -1,3 +1,15 @@
+
+## Play
+
+### Create the resources
+```sh
+docker-compose up --build
+```
+
+### Init services
+- Go to [transactions](./transactions) and [anti-fraud](./anti-fraud).
+- `pnpm install` and `pnpm start` 🐕
+
 # Yape Code Challenge :rocket:
 
 Our code challenge will let you marvel us with your Jedi coding skills :smile:. 
